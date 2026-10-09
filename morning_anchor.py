@@ -1,3 +1,26 @@
+import time
+
+def generate_content_with_fallback(client, prompt):
+    models = ["gemini-3.8-flash", "gemini-3.5-flash-lite"]
+    last_err = None
+    for model_name in models:
+        for attempt in range(1, 4):
+            try:
+                print(f"📡 Requesting script via {model_name} (Attempt {attempt})...")
+                response = generate_content_with_fallback(client, prompt)
+                )
+                if response and response.text:
+                    return response
+            except Exception as e:
+                err_str = str(e)
+                print(f"⚠️ {model_name} attempt {attempt} failed ({err_str}).")
+                last_err = e
+                if "404" in err_str or "NOT_FOUND" in err_str:
+                    print(f"⏩ {model_name} returned 404. Skipping to next model...")
+                    break
+                time.sleep(3 * attempt)
+    raise last_err
+
 import shutil
 from gradio_client import Client
 #!/usr/bin/env python3
@@ -453,12 +476,7 @@ def generate_script_payload(date_str: str, scripture_ref: str) -> dict:
     - ALL candidates MUST directly match today’s specific neuro-theology or birding topic.
     """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json"
-        )
+    response = generate_content_with_fallback(client, prompt)
     )
 
     return json.loads(response.text)
