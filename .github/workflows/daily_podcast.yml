@@ -30,9 +30,7 @@ jobs:
 
       # 3. Install system dependencies (FFmpeg)
       - name: Install FFmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
 
       # 4. Install Python dependencies
       - name: Install Python dependencies
