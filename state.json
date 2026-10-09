@@ -1,0 +1,82 @@
+{
+  "scripture_pool_remaining": [
+    "Exodus 3:1\u201312",
+    "Exodus 14:13\u201331",
+    "Exodus 16:1\u201318",
+    "Numbers 6:22\u201327",
+    "Deuteronomy 33:26\u201329",
+    "Joshua 1:1\u20139",
+    "1 Samuel 16:1\u201313",
+    "1 Kings 19:1\u201313",
+    "2 Samuel 22:17\u201320",
+    "Psalm 91:1\u201316",
+    "Psalm 103",
+    "Psalm 121:1\u20138",
+    "Isaiah 40:28\u201331",
+    "Isaiah 43:1\u20137",
+    "Jonah 2",
+    "Matthew 11:28\u201330",
+    "Mark 4:35\u201341",
+    "Luke 15:11\u201332",
+    "John 1:1\u201314",
+    "John 4:1\u201330",
+    "John 9:1\u201341",
+    "John 21:1\u201319",
+    "Acts 9:1\u201319",
+    "Romans 8:26\u201339",
+    "2 Corinthians 12:7\u201310",
+    "Philippians 4:4\u20139",
+    "Hebrews 11:1\u201312",
+    "James 1:2\u20138"
+  ],
+  "scripture_pool_used": [
+    "Psalm 23",
+    "Jeremiah 29:11\u201313",
+    "Ruth 1:16\u201317",
+    "Romans 8:1\u201311",
+    "Psalm 27:1\u201314",
+    "Psalm 46:1\u201311",
+    "Lamentations 3:22\u201333",
+    "Genesis 1:1\u20135",
+    "Genesis 22:9\u201314"
+  ],
+  "recent_sa_steps": [
+    1,
+    3,
+    2,
+    5,
+    7,
+    8,
+    9,
+    6,
+    10,
+    11,
+    1,
+    2
+  ],
+  "typea_tracks": [
+    "Beholding",
+    "Benevolence",
+    "Terrene",
+    "Wet Windowsill",
+    "For Once In The Countryside"
+  ],
+  "typea_history": [
+    "interludes/typeA-Beholding-1.mp3",
+    "interludes/typeA-Beholding-2.mp3",
+    "interludes/typeA-Beholding-3.mp3"
+  ],
+  "current_typea_track": "Beholding",
+  "episodes_history": [
+    {
+      "title": "Friday, October 09 \u2014 The Provision in the Test",
+      "description": "On this Friday morning, we reflect on Genesis 22:9\u201314 and how God provides even in our greatest moments of trial. Connecting this profound test of faith to Step 2 of Sexaholics Anonymous, we explore the hope of relying on a Power greater than ourselves to restore us.",
+      "pub_date": "Fri, 09 Oct 2026 05:09:16 GMT",
+      "guid": "morning-anchor-2026-10-09",
+      "mp3_url": "https://jbcortina214.github.io/morning-anchor/episodes/ep-final-2026-10-09-128k.mp3",
+      "image_url": "https://jbcortina214.github.io/morning-anchor/covers/cover_2026-10-09.jpg",
+      "duration": 394
+    }
+  ],
+  "last_build_date": "2026-10-09"
+}
