@@ -233,3 +233,90 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def update_rss_feed(state):
+    import html
+    import xml.etree.ElementTree as ET
+
+    FEED_FILE = "docs/feed.xml"
+    BASE_URL = "https://jbcortina214.github.io/morning-anchor"
+    os.makedirs("docs", exist_ok=True)
+
+    episodes = state.get("episodes_history", []) if isinstance(state, dict) else []
+    if not episodes:
+        episodes = [{
+            "guid": "morning-anchor-2026-10-09",
+            "title": "Morning Anchor - October 9, 2026",
+            "description": "Daily contemplative morning podcast at the intersection of faith, neurodiversity, and recovery.",
+            "pub_date": "Fri, 09 Oct 2026 16:50:34 GMT",
+            "mp3_url": f"{BASE_URL}/episodes/morning_anchor_2026-10-09.mp3",
+            "mp3_size": 1024000,
+            "link": f"{BASE_URL}/",
+            "duration": 300,
+            "author": "Jonathan B. Cortina"
+        }]
+
+    items_xml = ""
+    for ep in episodes:
+        guid = ep.get("guid", ep.get("id", "morning-anchor-ep-1"))
+        title = html.escape(ep.get("title", "Morning Anchor"))
+        desc = ep.get("description", "Daily contemplative morning podcast.")
+        desc_cdata = f"<![CDATA[{desc}]]>"
+        pub_date = ep.get("pub_date", "")
+        mp3_url = ep.get("mp3_url", f"{BASE_URL}/episodes/morning_anchor_2026-10-09.mp3")
+        mp3_size = ep.get("mp3_size", 1024000)
+        ep_link = ep.get("link", f"{BASE_URL}/")
+        duration = ep.get("duration", 300)
+        author = html.escape(ep.get("author", "Jonathan B. Cortina"))
+        img_url = html.escape(ep.get("image_url", f"{BASE_URL}/cover.jpg"))
+
+        transcript_tag = ""
+        if ep.get("transcript_url"):
+            t_url = html.escape(ep["transcript_url"])
+            transcript_tag = f'\n      <podcast:transcript url="{t_url}" type="text/vtt" />'
+
+        items_xml += f"""
+    <item>
+      <title>{title}</title>
+      <description>{desc_cdata}</description>
+      <pubDate>{pub_date}</pubDate>
+      <guid isPermaLink="false">{guid}</guid>
+      <link>{ep_link}</link>
+      <enclosure url="{mp3_url}" length="{mp3_size}" type="audio/mpeg" />
+      <itunes:duration>{duration}</itunes:duration>
+      <itunes:author>{author}</itunes:author>
+      <itunes:image href="{img_url}" />{transcript_tag}
+    </item>"""
+
+    rss = f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" 
+     xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+     xmlns:podcast="https://podcastindex.org/namespace/1.0">
+  <channel>
+    <title>Morning Anchor</title>
+    <link>{BASE_URL}/</link>
+    <language>en-us</language>
+    <description>Daily contemplative morning podcast at the intersection of faith, neurodiversity, and recovery.</description>
+    <itunes:author>Jonathan B. Cortina</itunes:author>
+    <itunes:type>episodic</itunes:type>
+    <itunes:owner>
+      <itunes:name>Jonathan B. Cortina</itunes:name>
+      <itunes:email>jbcortina214@gmail.com</itunes:email>
+    </itunes:owner>
+    <itunes:explicit>false</itunes:explicit>
+    <itunes:category text="Religion &amp; Spirituality" />
+    <itunes:category text="Society &amp; Culture" />
+    <itunes:image href="{BASE_URL}/cover.jpg" />
+    {items_xml}
+  </channel>
+</rss>"""
+
+    with open(FEED_FILE, "w", encoding="utf-8") as f:
+        f.write(rss)
+
+    try:
+        ET.parse(FEED_FILE)
+        print("✅ docs/feed.xml successfully generated and validated as 100% well-formed XML!")
+    except Exception as e:
+        print(f"❌ XML Validation Error: {e}")
