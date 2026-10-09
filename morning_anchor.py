@@ -146,14 +146,28 @@ def render_audio_episode(script_data, date_str):
         pipeline_errors.append(msg)
         return None
 
-def update_rss_feed(state):
+def update_rss_feed(state=None, today_str=None, *args, **kwargs):
     import os, html, re
     import xml.etree.ElementTree as ET
 
     BASE_URL = "https://jbcortina214.github.io/morning-anchor"
     os.makedirs("docs", exist_ok=True)
 
-    episodes = state.get("episodes_history", []) if isinstance(state, dict) else []
+    episodes = []
+    if isinstance(state, dict) and "episodes_history" in state:
+        episodes = state.get("episodes_history", [])
+    elif isinstance(today_str, dict) and "episodes_history" in today_str:
+        episodes = today_str.get("episodes_history", [])
+    
+    if not episodes:
+        try:
+            if "load_state" in globals():
+                st = load_state()
+                if isinstance(st, dict):
+                    episodes = st.get("episodes_history", [])
+        except Exception:
+            pass
+
     if not episodes:
         episodes = [{
             "guid": "morning-anchor-2026-10-09",
@@ -233,7 +247,7 @@ def update_rss_feed(state):
             f.write(rss)
 
     ET.parse("docs/feed.xml")
-    print("✅ feed.xml successfully generated and validated as 100% well-formed XML!")
+    print("✅ docs/feed.xml successfully generated and validated as 100% well-formed XML!")
 
 
 
