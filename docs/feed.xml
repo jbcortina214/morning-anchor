@@ -6,6 +6,7 @@
     <title>Morning Anchor</title>
     <link>https://jbcortina214.github.io/morning-anchor/</link>
     <language>en-us</language>
+    <copyright>&#169; 2026 Jonathan B. Cortina</copyright>
     <description>Daily contemplative morning podcast at the intersection of faith, neurodiversity, and recovery.</description>
     <itunes:author>Jonathan B. Cortina</itunes:author>
     <itunes:type>episodic</itunes:type>
@@ -14,10 +15,13 @@
       <itunes:email>jbcortina214@gmail.com</itunes:email>
     </itunes:owner>
     <itunes:explicit>false</itunes:explicit>
-    <itunes:category text="Religion &amp; Spirituality" />
-    <itunes:category text="Society &amp; Culture" />
+    <itunes:category text="Religion &amp; Spirituality">
+      <itunes:category text="Religion" />
+    </itunes:category>
+    <itunes:category text="Society &amp; Culture">
+      <itunes:category text="Documentary" />
+    </itunes:category>
     <itunes:image href="https://jbcortina214.github.io/morning-anchor/cover.jpg" />
-    
     <item>
       <title>Morning Anchor - October 9, 2026</title>
       <description><![CDATA[Daily contemplative morning podcast at the intersection of faith, neurodiversity, and recovery.]]></description>
