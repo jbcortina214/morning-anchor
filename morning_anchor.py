@@ -146,33 +146,97 @@ def render_audio_episode(script_data, date_str):
         pipeline_errors.append(msg)
         return None
 
-def update_rss_feed(script_data, date_str):
-    print("[RSS] Updating podcast RSS feed XML...")
-    try:
-        feed_content = f"""<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:itunes="[http://www.itunes.com/dtds/podcast-1.0.dtd](http://www.itunes.com/dtds/podcast-1.0.dtd)">
+def update_rss_feed(state):
+    import os, html, re
+    import xml.etree.ElementTree as ET
+
+    BASE_URL = "https://jbcortina214.github.io/morning-anchor"
+    os.makedirs("docs", exist_ok=True)
+
+    episodes = state.get("episodes_history", []) if isinstance(state, dict) else []
+    if not episodes:
+        episodes = [{
+            "guid": "morning-anchor-2026-10-09",
+            "title": "Morning Anchor - October 9, 2026",
+            "description": "Daily contemplative morning podcast at the intersection of faith, neurodiversity, and recovery.",
+            "pub_date": "Fri, 09 Oct 2026 16:50:34 GMT",
+            "mp3_url": f"{BASE_URL}/episodes/morning_anchor_2026-10-09.mp3",
+            "mp3_size": 1024000,
+            "link": f"{BASE_URL}/",
+            "duration": 300,
+            "author": "Jonathan B. Cortina",
+            "image_url": f"{BASE_URL}/cover.jpg"
+        }]
+
+    items_xml = ""
+    for ep in episodes:
+        guid = html.escape(str(ep.get("guid", ep.get("id", "morning-anchor-ep-1"))))
+        clean_title = html.escape(str(ep.get("title", "Morning Anchor")))
+        raw_desc = str(ep.get("description", "Daily contemplative morning podcast."))
+        clean_desc = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F]', '', raw_desc)
+        pub_date = html.escape(str(ep.get("pub_date", "")))
+        mp3_url = html.escape(str(ep.get("mp3_url", f"{BASE_URL}/episodes/morning_anchor_2026-10-09.mp3")))
+        mp3_size = ep.get("mp3_size", 1024000)
+        ep_link = html.escape(str(ep.get("link", f"{BASE_URL}/")))
+        duration = ep.get("duration", 300)
+        author = html.escape(str(ep.get("author", "Jonathan B. Cortina")))
+        img_url = html.escape(str(ep.get("image_url", f"{BASE_URL}/cover.jpg")))
+
+        transcript_tag = ""
+        if ep.get("transcript_url"):
+            t_url = html.escape(str(ep["transcript_url"]))
+            transcript_tag = f'\n      <podcast:transcript url="{t_url}" type="text/vtt" />'
+
+        items_xml += f"""
+    <item>
+      <title>{clean_title}</title>
+      <description><![CDATA[{clean_desc}]]></description>
+      <pubDate>{pub_date}</pubDate>
+      <guid isPermaLink="false">{guid}</guid>
+      <link>{ep_link}</link>
+      <enclosure url="{mp3_url}" length="{mp3_size}" type="audio/mpeg" />
+      <itunes:duration>{duration}</itunes:duration>
+      <itunes:author>{author}</itunes:author>
+      <itunes:image href="{img_url}" />{transcript_tag}
+    </item>"""
+
+    rss = f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" 
+     xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+     xmlns:podcast="https://podcastindex.org/namespace/1.0">
   <channel>
     <title>Morning Anchor</title>
-    <link>[https://github.com](https://github.com)</link>
-    <description>Daily Morning Anchor Podcast</description>
-    <item>
-      <title>Morning Anchor - {date_str}</title>
-      <pubDate>{datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')}</pubDate>
-      <enclosure url="[https://example.com/episodes/morning_anchor](https://example.com/episodes/morning_anchor)_{date_str}.mp3" length="1024" type="audio/mpeg"/>
-    </item>
+    <link>{BASE_URL}/</link>
+    <language>en-us</language>
+    <copyright>&#169; 2026 Jonathan B. Cortina</copyright>
+    <description>Daily contemplative morning podcast at the intersection of faith, neurodiversity, and recovery.</description>
+    <itunes:author>Jonathan B. Cortina</itunes:author>
+    <itunes:type>episodic</itunes:type>
+    <itunes:owner>
+      <itunes:name>Jonathan B. Cortina</itunes:name>
+      <itunes:email>jbcortina214@gmail.com</itunes:email>
+    </itunes:owner>
+    <itunes:explicit>false</itunes:explicit>
+    <itunes:category text="Religion &amp; Spirituality">
+      <itunes:category text="Religion" />
+    </itunes:category>
+    <itunes:category text="Society &amp; Culture">
+      <itunes:category text="Documentary" />
+    </itunes:category>
+    <itunes:image href="{BASE_URL}/cover.jpg" />
+    {items_xml.strip()}
   </channel>
 </rss>"""
-        with open(RSS_PATH, "w", encoding="utf-8") as f:
-            f.write(feed_content)
-        print("✅ RSS Feed XML updated successfully.")
-    except Exception as e:
-        msg = f"[RSS ERROR] Failed to update RSS feed: {e}"
-        print(f"❌ {msg}")
-        pipeline_errors.append(msg)
 
-# -----------------------------------------------------------------------------
-# MAIN PIPELINE
-# -----------------------------------------------------------------------------
+    for feed_path in ["docs/feed.xml", "feed.xml"]:
+        with open(feed_path, "w", encoding="utf-8") as f:
+            f.write(rss)
+
+    ET.parse("docs/feed.xml")
+    print("✅ feed.xml successfully generated and validated as 100% well-formed XML!")
+
+
+
 def main():
     print("==================================================")
     print("   Morning Anchor - Automated Podcast Build Pipeline")
