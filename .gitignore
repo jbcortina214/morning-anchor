@@ -1,4 +1,16 @@
 venv/
 
+
+# Ensure static assets are tracked
 !docs/
 !docs/**
+!episodes/
+!episodes/**
+!.nojekyll
+!docs/.nojekyll
+!cover.jpg
+!docs/cover.jpg
+!index.html
+!docs/index.html
+!feed.xml
+!docs/feed.xml
