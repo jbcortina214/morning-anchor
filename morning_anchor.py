@@ -484,7 +484,10 @@ def main():
         if validate_url_live(src["url"]):
             verified_sources.append(src)
         else:
-            hard_abort(f"Required source link failed live HTTP validation (404/dead path): {src['url']}")
+            print(f"  └─ HTTP Error/Dead link for {src['url']}. Skipping candidate...")
+
+    if not verified_sources:
+        hard_abort("All candidate source links failed live HTTP validation.")
 
     # Step 6: Generate Artwork (Zero Fallback)
     generate_cover_artwork(symbolic_object, cover_jpg_path)
