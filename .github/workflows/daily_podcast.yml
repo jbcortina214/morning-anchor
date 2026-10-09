@@ -22,10 +22,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install System Dependencies (Native FFmpeg)
+      - name: Install System Dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg espeak-ng
 
       - name: Install Python Dependencies
         run: |

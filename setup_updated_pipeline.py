@@ -1,31 +1,76 @@
-import os
-import sys
-import shutil
-import subprocess
-import datetime
-import json
-import email.utils
-import glob
+import os, sys, subprocess
+
+print("⚙️ Executing pre-flight verified setup for Morning Anchor pipeline...")
+
+# 1. Ensure Dependencies
+with open("requirements.txt", "a+", encoding="utf-8") as f:
+    f.seek(0)
+    content = f.read()
+    if "gTTS" not in content:
+        f.write("\ngTTS>=2.5.0\n")
+
+# 2. Configure GitHub Actions Workflow
+workflow_yaml = """name: Daily Morning Anchor Pipeline
+
+on:
+  schedule:
+    - cron: '0 11 * * *' # Daily at 6:00 AM CDT (11:00 UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg espeak-ng
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run Morning Anchor Daily Generator
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python morning_anchor.py
+
+      - name: Commit and Push Updated Audio & Feeds
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          timestamp=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          git commit -m "Automated daily podcast release - ${timestamp}" || echo "No changes to commit"
+          git push origin main
+"""
+
+os.makedirs(".github/workflows", exist_ok=True)
+with open(".github/workflows/daily_podcast.yml", "w", encoding="utf-8") as f:
+    f.write(workflow_yaml)
+
+# 3. Create Production morning_anchor.py
+morning_anchor_code = '''import os, sys, shutil, subprocess, datetime, json, re, email.utils, glob
 from xml.sax.saxutils import escape as xml_escape
 
 print("==============================================")
 print("  Morning Anchor - Production Podcast Engine  ")
 print("==============================================")
-
-# Initialize static FFmpeg binary
-try:
-    import static_ffmpeg
-    static_ffmpeg.add_paths()
-    print("✅ [FFMPEG] Static FFmpeg environment initialized.")
-except Exception as e:
-    print(f"ℹ️ [FFMPEG] static_ffmpeg notice: {e}")
-
-# Check ffmpeg availability
-ffmpeg_path = shutil.which("ffmpeg")
-if not ffmpeg_path:
-    print("❌ [FFMPEG ERROR] 'ffmpeg' binary was not found.")
-    print("👉 Run: pip install static-ffmpeg")
-    sys.exit(1)
 
 os.makedirs("episodes", exist_ok=True)
 os.makedirs("docs/episodes", exist_ok=True)
@@ -42,17 +87,17 @@ if weekday == 5:
     is_saturday_recap = True
     min_duration_sec = 720
     max_duration_sec = 900
-    target_words = 2200
+    target_words = 1900
     episode_type_str = "Weekly Recap"
 else:
     is_saturday_recap = False
     min_duration_sec = 480
     max_duration_sec = 720
-    target_words = 1500
+    target_words = 1400
     episode_type_str = "Daily Episode"
 
 print(f"📅 Schedule: {now.strftime('%A')} ({episode_type_str}).")
-print(f"⏱️ Required Duration: {min_duration_sec}s - {max_duration_sec}s | Target Word Count: ~{target_words} words.")
+print(f"⏱️ Required Duration: {min_duration_sec}s - {max_duration_sec}s | Target Payload Word Count: ~{target_words} words.")
 
 mp3_filename = f"morning_anchor_{date_str}.mp3"
 ep_root_mp3 = os.path.join("episodes", mp3_filename)
@@ -63,74 +108,31 @@ ep_docs_html = os.path.join("docs/episodes", f"morning_anchor_{date_str}.html")
 api_key = os.environ.get("GEMINI_API_KEY", "").strip()
 
 def get_extended_fallback_payload(is_saturday):
-    reflection = (
-        "Welcome to Morning Anchor. Today we anchor ourselves in steady presence, cultivating calm amid life's uncertainties. "
-        "When we step into the morning, our minds often rush ahead to meet the demands, worries, and expectations of the day. "
-        "Yet, true grounding begins right here, in this immediate moment. Consider how a ship anchors not to prevent all movement, "
-        "but to maintain stability while the tides shift around it. In the same way, setting an intentional mental and spiritual anchor "
-        "allows us to experience life's waves without being swept away by them. Trust that small, deliberate actions taken in quiet faith "
-        "build an enduring foundation of peace.\n\n"
-        "When unexpected friction or overwhelming choices arise today, allow yourself to pause. Take a slow, deep breath, release the pressure "
-        "to control every outcome, and remember that your intrinsic worth is grounded in your being, not in relentless doing. Let us move through "
-        "this day with quiet confidence, patience toward ourselves, and a heart open to grace. Remember that peace is not the absence of external "
-        "commotion, but an internal sanctuary built through intentional practice and spiritual trust.\n\n"
-        "Every morning offers a quiet invitation to reset our perspective, relinquish unnecessary burdens, and step forward with quiet courage. "
-        "When we allow ourselves to slow down and listen, we cultivate a deeper resilience that sustains us through challenging moments. "
-        "Let today be a practice in presence, patience, and unwavering faith. As you go about your work and interactions, remember that "
-        "you do not need to solve every problem at once. Ground yourself in what is immediate, reasonable, and clear, allowing grace to fill "
-        "the spaces between your efforts.\n\n"
-        "In moments of hesitation or internal noise, return to your breath and remind yourself of your core values. Integrity, patience, and "
-        "compassion are not passive qualities; they are active choices that anchor us when circumstances feel chaotic. By holding fast to "
-        "these truths, we navigate the demands of modern life with quiet dignity and strength."
-    )
+    reflection = """Welcome to Morning Anchor. Today we anchor ourselves in steady presence, cultivating calm amid life's uncertainties. When we step into the morning, our minds often rush ahead to meet the demands, worries, and expectations of the day. Yet, true grounding begins right here, in this immediate moment. Consider how a ship anchors not to prevent all movement, but to maintain stability while the tides shift around it. In the same way, setting an intentional mental and spiritual anchor allows us to experience life's waves without being swept away by them. Trust that small, deliberate actions taken in quiet faith build an enduring foundation of peace.
+
+When unexpected friction or overwhelming choices arise today, allow yourself to pause. Take a slow, deep breath, release the pressure to control every outcome, and remember that your intrinsic worth is grounded in your being, not in relentless doing. Let us move through this day with quiet confidence, patience toward ourselves, and a heart open to grace. Remember that peace is not the absence of external commotion, but an internal sanctuary built through intentional practice and spiritual trust.
+
+Every morning offers a quiet invitation to reset our perspective, relinquish unnecessary burdens, and step forward with quiet courage. When we allow ourselves to slow down and listen, we cultivate a deeper resilience that sustains us through challenging moments. Let today be a practice in presence, patience, and unwavering faith."""
     
-    sa_prayer = (
-        "God, grant me the serenity to accept the things I cannot change, courage to change the things I can, and wisdom to know the difference. "
-        "Living one day at a time, enjoying one moment at a time, accepting hardships as the pathway to peace, taking as Jesus did this "
-        "sinful world as it is, not as I would have it. Trusting that You will make all things right if I surrender to Your will, so that "
-        "I may be reasonably happy in this life and supremely happy with You forever in the next. Amen. "
-        "May this prayer remain a steady reminder throughout our hours, reminding us that wisdom lies in discerning where our influence ends and where acceptance begins."
-    )
+    sa_prayer = """God, grant me the serenity to accept the things I cannot change, courage to change the things I can, and wisdom to know the difference. Living one day at a time, enjoying one moment at a time, accepting hardships as the pathway to peace, taking as Jesus did this sinful world as it is, not as I would have it. Trusting that You will make all things right if I surrender to Your will, so that I may be reasonably happy in this life and supremely happy with You forever in the next. Amen."""
     
     neuro_dbt_topic = "Mindful Awareness and Radical Acceptance"
     
-    neuro_dbt_text = (
-        "In Dialectical Behavior Therapy, radical acceptance means completely accepting reality as it is, without judgment, bitterness, or mental resistance. "
-        "When we fight against reality—insisting that things 'should not' be the way they are—we transform inevitable pain into prolonged suffering. "
-        "Acceptance does not mean approval, passivity, or agreement with unfair circumstances; rather, it is the clear acknowledgment of facts as they exist right now. "
-        "From a neurodivergent perspective, managing cognitive overload and sensory strain requires recognizing when our nervous system is dysregulated.\n\n"
-        "By pausing to observe our internal landscape without judgment, we create space between the stressor and our response. Today, practice observing "
-        "difficult emotions or unexpected disruptions like clouds passing through an open sky. Acknowledge their presence, allow them to pass, and return "
-        "your focus to what is directly within your control. When we stop pouring energy into resisting reality, we free up critical cognitive and emotional "
-        "capacity to make thoughtful, constructive choices.\n\n"
-        "Mindful acceptance also involves honoring our sensory and executive bandwidth. When we stop comparing our processing speed or emotional capacity "
-        "to external standards, we can build supportive structures that accommodate our true needs. Radical acceptance gives us the freedom to respond wisely "
-        "rather than react impulsively. Remember that honoring your pacing is a vital part of maintaining cognitive equilibrium and long-term well-being.\n\n"
-        "Practicing self-compassion during sensory or executive overload is not a luxury—it is essential maintenance. When task switching feels taxing or "
-        "environmental noise builds up, grant yourself permission to step back, adjust your environment, and reset without shame or harsh self-critique."
-    )
+    neuro_dbt_text = """In Dialectical Behavior Therapy, radical acceptance means completely accepting reality as it is, without judgment, bitterness, or mental resistance. When we fight against reality—insisting that things 'should not' be the way they are—we transform inevitable pain into prolonged suffering. Acceptance does not mean approval, passivity, or agreement with unfair circumstances; rather, it is the clear acknowledgment of facts as they exist right now. From a neurodivergent perspective, managing cognitive overload and sensory strain requires recognizing when our nervous system is dysregulated.
+
+By pausing to observe our internal landscape without judgment, we create space between the stressor and our response. Today, practice observing difficult emotions or unexpected disruptions like clouds passing through an open sky. Acknowledge their presence, allow them to pass, and return your focus to what is directly within your control. When we stop pouring energy into resisting reality, we free up critical cognitive and emotional capacity to make thoughtful, constructive choices.
+
+Mindful acceptance also involves honoring our sensory and executive bandwidth. When we stop comparing our processing speed or emotional capacity to external standards, we can build supportive structures that accommodate our true needs. Radical acceptance gives us the freedom to respond wisely rather than react impulsively."""
     
     bird_species = "Eastern Screech-Owl"
     
-    bird_text = (
-        "The Eastern Screech-Owl (Megascops asio) is a master of camouflage and silent observation across North Texas woodlands and suburban habitats. "
-        "Standing less than ten inches tall, this small owl roosts inside natural tree cavities and nest boxes, blending seamlessly into rough tree bark. "
-        "Despite its small stature, its keen hearing and specialized feather structure allow it to navigate dark nighttime canopies with quiet precision.\n\n"
-        "Observing the habits of the Screech-Owl teaches us the value of patient listening, stillness, and adapting gracefully to our surrounding environment. "
-        "In a world that constantly demands loud assertion, the quiet presence of the owl reminds us that true strength often resides in calm, focused observation. "
-        "By watching quietly from a secure perch, the Screech-Owl moves only when necessary, demonstrating an efficiency and composure that serves as a powerful metaphor for our daily lives.\n\n"
-        "In suburban neighborhoods, Screech-Owls play an essential role in ecological balance. Their presence highlights the importance of maintaining natural "
-        "roosting sites and native trees. By protecting these quiet nocturnal hunters, we preserve the rich biodiversity of our local North Texas ecosystem. "
-        "Taking time to notice local wildlife reminds us that quiet, resilient life thrives all around us when we pause to pay attention.\n\n"
-        "Creating sanctuary space—whether by mounting a screech-owl nest box in a quiet yard or simply leaving mature trees standing—connects us to the "
-        "rhythms of the natural world. In preserving space for these nocturnal creatures, we cultivate a deeper reverence for the quiet life that surrounds us."
-    )
+    bird_text = """The Eastern Screech-Owl (Megascops asio) is a master of camouflage and silent observation across North Texas woodlands and suburban habitats. Standing less than ten inches tall, this small owl roosts inside natural tree cavities and nest boxes, blending seamlessly into rough tree bark. Despite its small stature, its keen hearing and specialized feather structure allow it to navigate dark nighttime canopies with quiet precision.
+
+Observing the habits of the Screech-Owl teaches us the value of patient listening, stillness, and adapting gracefully to our surrounding environment. In a world that constantly demands loud assertion, the quiet presence of the owl reminds us that true strength often resides in calm, focused observation. By watching quietly from a secure perch, the Screech-Owl moves only when necessary, demonstrating an efficiency and composure that serves as a powerful metaphor for our daily lives.
+
+In suburban neighborhoods, Screech-Owls play an essential role in ecological balance. Their presence highlights the importance of maintaining natural roosting sites and native trees. By protecting these quiet nocturnal hunters, we preserve the rich biodiversity of our local North Texas ecosystem."""
     
-    closing = (
-        "As you transition into the rest of your day, carry this sense of grounded peace into every conversation and task. Remember that you do not need to rush "
-        "or prove yourself. Walk gently, stay deeply anchored in hope, and extend kindness to yourself and others. Thank you for spending this time with "
-        "Morning Anchor. May your day be filled with steady light, clarity, and enduring strength."
-    )
+    closing = """As you transition into the rest of your day, carry this sense of grounded peace into every conversation and task. Remember that you do not need to rush or prove yourself. Walk gently, stay deeply anchored in hope, and extend kindness to yourself and others. Thank you for spending this time with Morning Anchor. May your day be filled with steady light and clarity."""
     
     sources = [
         "The Serenity Prayer (Full Version) - Reinhold Niebuhr",
@@ -140,9 +142,9 @@ def get_extended_fallback_payload(is_saturday):
     ]
     
     if is_saturday:
-        reflection += "\n\n" + reflection
-        neuro_dbt_text += "\n\n" + neuro_dbt_text
-        bird_text += "\n\n" + bird_text
+        reflection += " " + reflection
+        neuro_dbt_text += " " + neuro_dbt_text
+        bird_text += " " + bird_text
 
     return {
         "reflection": reflection,
@@ -160,7 +162,7 @@ episode_payload = get_extended_fallback_payload(is_saturday_recap)
 if api_key:
     try:
         import urllib.request
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
         prompt_text = (
             f"Generate a comprehensive, highly detailed {episode_type_str} podcast script payload for Morning Anchor. "
             f"CRITICAL REQUIREMENT: The spoken word count across all text fields combined MUST be AT LEAST {target_words} words "
@@ -226,20 +228,9 @@ def render_spoken_audio_pipeline(output_mp3_path, sections, target_min, target_m
             tts.save(sec_raw)
             normalize_audio_track(sec_raw, sec_norm)
         except Exception as e:
-            if sys.platform == "darwin":
-                print(f"  [TTS Fallback - Section {idx}] using macOS native 'say': {e}")
-                sec_aiff = f"tmp_sec_{idx}.aiff"
-                temp_files.append(sec_aiff)
-                subprocess.run(["say", "-o", sec_aiff, text], check=True)
-                normalize_audio_track(sec_aiff, sec_norm)
-            else:
-                espeak_bin = shutil.which("espeak-ng") or shutil.which("espeak")
-                if espeak_bin:
-                    print(f"  [TTS Fallback - Section {idx}] using {espeak_bin}: {e}")
-                    subprocess.run([espeak_bin, "-s", "135", "-w", sec_wav, text], check=True)
-                    normalize_audio_track(sec_wav, sec_norm)
-                else:
-                    raise RuntimeError(f"TTS synthesis failed for section {idx}: {e}")
+            print(f"  [TTS Fallback - Section {idx}] using espeak-ng: {e}")
+            subprocess.run(["espeak-ng", "-s", "135", "-w", sec_wav, text], check=True)
+            normalize_audio_track(sec_wav, sec_norm)
         
         normalized_section_files.append(sec_norm)
 
@@ -264,9 +255,9 @@ def render_spoken_audio_pipeline(output_mp3_path, sections, target_min, target_m
     
     with open(concat_manifest, "w", encoding="utf-8") as f:
         for idx, sf in enumerate(normalized_section_files):
-            f.write(f"file '{os.path.abspath(sf)}'\n")
+            f.write("file '" + os.path.abspath(sf) + "'\\n")
             if interlude_path and idx < len(normalized_section_files) - 1:
-                f.write(f"file '{os.path.abspath(interlude_path)}'\n")
+                f.write("file '" + os.path.abspath(interlude_path) + "'\\n")
 
     voice_concat_mp3 = "tmp_voice_concat.mp3"
     temp_files.append(voice_concat_mp3)
@@ -287,10 +278,8 @@ def render_spoken_audio_pipeline(output_mp3_path, sections, target_min, target_m
     # Cleanup temporary workspace files
     for tf in temp_files:
         if os.path.exists(tf):
-            try:
-                os.remove(tf)
-            except Exception:
-                pass
+            try: os.remove(tf)
+            except: pass
 
     # Hard ffprobe Duration Validation Gate
     cmd_probe = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", output_mp3_path]
@@ -317,7 +306,7 @@ safe_copy(ep_root_mp3, ep_docs_mp3)
 actual_byte_size = os.path.getsize(ep_root_mp3)
 
 # Build Complete CDATA Show Notes HTML with All 8 Skeleton Fields
-sources_list_items = "".join([f"<li>{xml_escape(str(s))}</li>" for s in episode_payload['candidate_sources']])
+sources_list_items = "".join(["<li>" + xml_escape(str(s)) + "</li>" for s in episode_payload['candidate_sources']])
 
 show_notes_html = f"""<h3>Daily Reflection</h3>
 <p>{xml_escape(str(episode_payload['reflection']))}</p>
@@ -375,10 +364,8 @@ html_content = f"""<!DOCTYPE html>
 </body>
 </html>"""
 
-with open(ep_root_html, "w", encoding="utf-8") as f:
-    f.write(html_content)
-with open(ep_docs_html, "w", encoding="utf-8") as f:
-    f.write(html_content)
+with open(ep_root_html, "w", encoding="utf-8") as f: f.write(html_content)
+with open(ep_docs_html, "w", encoding="utf-8") as f: f.write(html_content)
 
 # RSS Feed XML Generation with CDATA Show Notes & Nested Apple Categories
 feed_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -420,12 +407,39 @@ feed_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
   </channel>
 </rss>"""
 
-with open("feed.xml", "w", encoding="utf-8") as f:
-    f.write(feed_xml)
-with open("docs/feed.xml", "w", encoding="utf-8") as f:
-    f.write(feed_xml)
+with open("feed.xml", "w", encoding="utf-8") as f: f.write(feed_xml)
+with open("docs/feed.xml", "w", encoding="utf-8") as f: f.write(feed_xml)
 
 print("✅ RSS feeds updated with CDATA show notes and verified duration metadata.")
 print("==============================================")
 print("  PIPELINE BUILD COMPLETE & FULLY VERIFIED   ")
 print("==============================================")
+'''
+
+with open("morning_anchor.py", "w", encoding="utf-8") as f:
+    f.write(morning_anchor_code)
+
+print("🚀 Executing local test run of morning_anchor.py...")
+subprocess.run(["python3", "-m", "pip", "install", "gTTS"], check=False)
+subprocess.run(["python3", "morning_anchor.py"], check=True)
+
+print("📦 Staging updated files...")
+subprocess.run(["git", "add", "requirements.txt", ".github/workflows/daily_podcast.yml", "morning_anchor.py", "feed.xml", "docs/feed.xml", "episodes/", "docs/episodes/"], check=False)
+
+timestamp = subprocess.run(["date", "-u", "+%Y-%m-%d %H:%M:%S UTC"], capture_output=True, text=True).stdout.strip()
+commit_msg = f"Deploy production podcast pipeline - {timestamp}"
+print(f"📝 Committing: {commit_msg}")
+subprocess.run(["git", "commit", "-m", commit_msg], check=False)
+
+print("🔄 Syncing remote repository...")
+subprocess.run(["git", "pull", "--rebase", "origin", "main"], check=False)
+
+print("🚀 Pushing to GitHub main branch...")
+res = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True)
+
+if res.returncode == 0:
+    print("✅ SUCCESS: Pipeline deployed and pushed to main!")
+else:
+    print("❌ ERROR during git push:")
+    print(res.stderr)
+
