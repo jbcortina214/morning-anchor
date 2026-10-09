@@ -9,15 +9,29 @@
         h1 { color: #38bdf8; }
         a { color: #38bdf8; text-decoration: none; }
         a:hover { text-decoration: underline; }
-        .card { background: #1e293b; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        .card { background: #1e293b; padding: 24px; border-radius: 12px; margin-top: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        audio { width: 100%; margin: 15px 0; }
+        .btn { display: inline-block; background: #0284c7; color: white; padding: 10px 18px; border-radius: 6px; font-weight: bold; margin-right: 10px; margin-top: 10px; }
+        .btn:hover { background: #0369a1; text-decoration: none; }
     </style>
 </head>
 <body>
     <h1>Morning Anchor Podcast</h1>
     <p>Daily contemplative morning podcast at the intersection of faith, neurodiversity, and recovery.</p>
+    
     <div class="card">
-        <h2>Subscribe & Listen</h2>
-        <p><a href="feed.xml">RSS Feed Link</a></p>
+        <h2>Latest Episode: October 9, 2026</h2>
+        <p><a href="episodes/morning_anchor_2026-10-09.html">View Dedicated Episode Webpage</a></p>
+        <audio controls preload="metadata">
+            <source src="episodes/morning_anchor_2026-10-09.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div>
+            <a href="episodes/morning_anchor_2026-10-09.mp3" class="btn" download>Download Episode MP3</a>
+            <a href="feed.xml" class="btn" rel="subscribe">Subscribe via RSS Feed</a>
+            <a href="https://podcasts.apple.com/" class="btn" target="_blank" rel="noopener">Apple Podcasts</a>
+            <a href="https://open.spotify.com/" class="btn" target="_blank" rel="noopener">Spotify</a>
+        </div>
     </div>
 </body>
 </html>

@@ -1,37 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" 
-     xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+     xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" 
+     xmlns:content="http://purl.org/rss/1.0/modules/content/"
      xmlns:podcast="https://podcastindex.org/namespace/1.0">
   <channel>
     <title>Morning Anchor</title>
     <link>https://jbcortina214.github.io/morning-anchor/</link>
     <language>en-us</language>
-    <copyright>&#169; 2026 Jonathan B. Cortina</copyright>
+    <copyright>Copyright 2026 Jonathan Cortina</copyright>
     <description>Daily contemplative morning podcast at the intersection of faith, neurodiversity, and recovery.</description>
-    <itunes:author>Jonathan B. Cortina</itunes:author>
+    <itunes:author>Jonathan Cortina</itunes:author>
     <itunes:type>episodic</itunes:type>
     <itunes:owner>
-      <itunes:name>Jonathan B. Cortina</itunes:name>
+      <itunes:name>Jonathan Cortina</itunes:name>
       <itunes:email>jbcortina214@gmail.com</itunes:email>
     </itunes:owner>
+    <itunes:image href="https://jbcortina214.github.io/morning-anchor/cover.jpg"/>
+    <itunes:category text="Religion &amp; Spirituality"/>
+    <itunes:category text="Society &amp; Culture"/>
     <itunes:explicit>false</itunes:explicit>
-    <itunes:category text="Religion &amp; Spirituality">
-      <itunes:category text="Religion" />
-    </itunes:category>
-    <itunes:category text="Society &amp; Culture">
-      <itunes:category text="Documentary" />
-    </itunes:category>
-    <itunes:image href="https://jbcortina214.github.io/morning-anchor/cover.jpg" />
     <item>
       <title>Morning Anchor - October 9, 2026</title>
-      <description><![CDATA[Daily contemplative morning podcast at the intersection of faith, neurodiversity, and recovery.]]></description>
-      <pubDate>Fri, 09 Oct 2026 16:50:34 GMT</pubDate>
-      <guid isPermaLink="false">morning-anchor-2026-10-09</guid>
-      <link>https://jbcortina214.github.io/morning-anchor/</link>
-      <enclosure url="https://jbcortina214.github.io/morning-anchor/episodes/morning_anchor_2026-10-09.mp3" length="2004" type="audio/mpeg" />
-      <itunes:duration>300</itunes:duration>
-      <itunes:author>Jonathan B. Cortina</itunes:author>
-      <itunes:image href="https://jbcortina214.github.io/morning-anchor/cover.jpg" />
+      <link>https://jbcortina214.github.io/morning-anchor/episodes/morning_anchor_2026-10-09.html</link>
+      <description>Daily contemplative episode.</description>
+      <pubDate>Fri, 09 Oct 2026 06:00:00 -0500</pubDate>
+      <enclosure url="https://jbcortina214.github.io/morning-anchor/episodes/morning_anchor_2026-10-09.mp3" length="125162" type="audio/mpeg"/>
+      <guid isPermaLink="false">morning_anchor_2026-10-09</guid>
+      <itunes:duration>10</itunes:duration>
+      <itunes:explicit>false</itunes:explicit>
     </item>
   </channel>
 </rss>
