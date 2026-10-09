@@ -2,6 +2,8 @@ venv/
 
 
 # Ensure static assets are tracked
+
+# Track static assets
 !docs/
 !docs/**
 !episodes/
