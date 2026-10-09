@@ -1,3 +1,5 @@
+import shutil
+from gradio_client import Client
 #!/usr/bin/env python3
 """
 Morning Anchor - Daily Contemplative Podcast Pipeline
@@ -281,52 +283,44 @@ def fetch_typeB_music_preview(track_name: str, artist_name: str, output_path: st
 # ---------------------------------------------------------------------------
 def generate_cover_artwork(image_symbol: str, output_path: str):
     """
-    Generates episode cover artwork via Imagen 3 using Van Gogh style template.
-    Strict Zero Fallback Rule: API error, missing file, or 0-byte triggers hard_abort().
+    Generates episode cover artwork via FLUX.1-schnell on Hugging Face ZeroGPU Spaces.
+    Strict Zero Fallback Rule: Any API failure, missing file, or 0-byte output triggers hard_abort().
     """
     prompt = ARTWORK_PROMPT_TEMPLATE.format(image_symbol=image_symbol)
-    print(f"[ARTWORK] Generating cover art via Imagen 3...")
+    print(f"[ARTWORK] Generating cover art via FLUX.1-schnell (ZeroGPU Space)...")
     print(f"  └─ Symbol: {image_symbol}")
     print(f"  └─ Prompt: {prompt}")
 
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        hard_abort("GEMINI_API_KEY environment variable not set for Imagen 3 artwork generation.")
-
     try:
-        from google import genai
-        from google.genai import types
+        hf_token = os.environ.get("HF_TOKEN")
+        client = Client("black-forest-labs/FLUX.1-schnell", token=hf_token) if hf_token else Client("black-forest-labs/FLUX.1-schnell")
 
-        client = genai.Client(api_key=api_key)
-        result = client.models.generate_images(
-            model='imagen-3.0-generate-002',
+        result = client.predict(
             prompt=prompt,
-            config=types.GenerateImagesConfig(
-                number_of_images=1,
-                output_mime_type="image/jpeg",
-                aspect_ratio="1:1",
-                person_generation="ALLOW_ADULT"
-            )
+            seed=0,
+            randomize_seed=True,
+            width=1024,
+            height=1024,
+            num_inference_steps=4,
+            api_name="/infer"
         )
 
-        for generated_image in result.generated_images:
-            image_bytes = generated_image.image.image_bytes
-            with open(output_path, "wb") as f:
-                f.write(image_bytes)
-            break
+        img_temp_path = result[0] if isinstance(result, (tuple, list)) else result
+
+        if not img_temp_path or not os.path.exists(img_temp_path):
+            hard_abort("FLUX.1 Gradio client returned an invalid or non-existent file path.")
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        shutil.copy(img_temp_path, output_path)
 
     except Exception as e:
-        hard_abort(f"Imagen 3 API artwork generation call failed: {e}")
+        hard_abort(f"FLUX.1 ZeroGPU Space artwork generation failed: {e}")
 
     if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
         hard_abort("Cover artwork file is missing or 0-bytes after generation.")
-    
+
     print(f"  └─ Cover artwork generated successfully ({os.path.getsize(output_path)} bytes).")
 
-
-# ---------------------------------------------------------------------------
-# AUDIO DURATION & CONCATENATION ENGINE
-# ---------------------------------------------------------------------------
 def get_audio_duration_seconds(file_path: str) -> float:
     """Gets exact duration of an audio file in seconds via ffprobe."""
     cmd = [
@@ -426,6 +420,49 @@ def build_show_notes(overview: str, chapters_list: list, verified_sources: list)
 # ---------------------------------------------------------------------------
 # MAIN PIPELINE ORCHESTRATION
 # ---------------------------------------------------------------------------
+def generate_script_payload(date_str: str, scripture_ref: str) -> dict:
+    """Generates episode text chunks and dynamic open-access candidate sources using Gemini."""
+    import os, json
+    from google import genai
+    from google.genai import types
+
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        hard_abort("GEMINI_API_KEY environment variable is missing.")
+
+    client = genai.Client(api_key=api_key)
+
+    prompt = f"""
+    You are the writer for the Morning Anchor podcast episode for {date_str}.
+    Scripture Focus: {scripture_ref}
+
+    Produce a JSON object with:
+    1. "reflection": 2-3 sentence reflection on {scripture_ref}.
+    2. "sa_prayer": SA Step 3 prayer text.
+    3. "neuro_dbt_topic": Title/topic for a neuro-theology or DBT mindfulness focus.
+    4. "neuro_dbt_text": 2 sentence summary on how the practice down-regulates stress/amygdala reactivity.
+    5. "bird_species": A native bird species for North Texas / Central flyway.
+    6. "bird_text": 2 sentence description of observing this bird in nature.
+    7. "closing": A 1-sentence closing blessing.
+    8. "candidate_sources": Array of 2 to 3 candidate reference objects:
+       [{"label": "<descriptive label>", "url": "<url>"}]
+
+    CRITICAL RULES FOR SOURCE CANDIDATES:
+    - ONLY provide open-access, non-paywalled public URLs (ncbi.nlm.nih.gov/pmc, nih.gov, ebird.org, .edu, .gov).
+    - NEVER provide doi.org links, paywalled journals, or dead landing pages.
+    - ALL candidates MUST directly match today’s specific neuro-theology or birding topic.
+    """
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json"
+        )
+    )
+
+    return json.loads(response.text)
+
 def main():
     print("========================================================")
     print("   Morning Anchor - Automated Podcast Build Pipeline   ")
@@ -474,10 +511,9 @@ def main():
         music_track = "Time (You and I)"
         fetch_typeB_music_preview(music_track, music_artist, typeB_audio_path)
 
-    candidate_sources = [
-        {"label": "Neuro-theology & DBT Research Study", "url": "https://doi.org/10.1007/s10943-023-01750-1"},
-        {"label": "Local Birding Species Observation Data", "url": "https://ebird.org/species/easowl1"}
-    ]
+    print("[GEMINI] Generating daily script payload and open-access sources...")
+    script_payload = generate_script_payload(date_str, spoken_scripture_ref)
+    candidate_sources = script_payload.get("candidate_sources", [])
     
     verified_sources = []
     for src in candidate_sources:
@@ -495,27 +531,27 @@ def main():
     # Step 7: Synthesize Spoken TTS Chunks
     print("[TTS] Synthesizing spoken audio chunks (en-AU-NatashaNeural @ +8% speed)...")
     
-    chunk1_txt = f"{spoken_scripture_ref}. 'Do not be afraid. Stand firm and you will see the deliverance the Lord will bring you today.'"
+    chunk1_txt = f"{spoken_scripture_ref}."
     chunk1_path = os.path.join(DIR_TEMP, "01_scripture.mp3")
     generate_tts_chunk(chunk1_txt, chunk1_path)
 
-    chunk2_txt = "Scripture Reflection. When we are pressed on all sides, standing still is an act of trust rather than paralysis."
+    chunk2_txt = f"Scripture Reflection. {script_payload.get('reflection', '')}"
     chunk2_path = os.path.join(DIR_TEMP, "02_reflection.mp3")
     generate_tts_chunk(chunk2_txt, chunk2_path)
 
-    chunk3_txt = "Sexaholics Anonymous Step 3 Prayer. God, I offer myself to Thee—to build with me and to do with me as Thou wilt."
+    chunk3_txt = f"Sexaholics Anonymous Step 3 Prayer. {script_payload.get('sa_prayer', '')}"
     chunk3_path = os.path.join(DIR_TEMP, "03_sa_prayer.mp3")
     generate_tts_chunk(chunk3_txt, chunk3_path)
 
-    chunk4_txt = "Neuro-theology and DBT: Mindful Emotion Regulation. Studies show that pairing focused breathing with contemplative prayer down-regulates amygdala hyper-reactivity."
+    chunk4_txt = f"{script_payload.get('neuro_dbt_topic', 'Neuro-theology and DBT')}. {script_payload.get('neuro_dbt_text', '')}"
     chunk4_path = os.path.join(DIR_TEMP, "04_neuro_dbt.mp3")
     generate_tts_chunk(chunk4_txt, chunk4_path)
 
-    chunk5_txt = "Daily Bird Observation. Look at the birds: Eastern Screech-Owl. Notice its calm presence perched silently in the shadowed canopy."
+    chunk5_txt = f"Daily Bird Observation. Look at the birds: {script_payload.get('bird_species', '')}. {script_payload.get('bird_text', '')}"
     chunk5_path = os.path.join(DIR_TEMP, "05_birding.mp3")
     generate_tts_chunk(chunk5_txt, chunk5_path)
 
-    chunk6_txt = "Closing. Grace and peace be with you today as you walk in steady presence."
+    chunk6_txt = f"Closing. {script_payload.get('closing', '')}"
     chunk6_path = os.path.join(DIR_TEMP, "06_closing.mp3")
     generate_tts_chunk(chunk6_txt, chunk6_path)
 
