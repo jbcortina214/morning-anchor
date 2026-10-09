@@ -16,8 +16,12 @@
       <itunes:email>jbcortina214@gmail.com</itunes:email>
     </itunes:owner>
     <itunes:image href="https://jbcortina214.github.io/morning-anchor/cover.jpg"/>
-    <itunes:category text="Religion &amp; Spirituality"/>
-    <itunes:category text="Society &amp; Culture"/>
+        <itunes:category text="Religion &amp; Spirituality">
+      <itunes:category text="Spirituality"/>
+    </itunes:category>
+    <itunes:category text="Society &amp; Culture">
+      <itunes:category text="Personal Journals"/>
+    </itunes:category>
     <itunes:explicit>false</itunes:explicit>
     <item>
       <title>Morning Anchor - October 9, 2026</title>

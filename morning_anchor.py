@@ -383,8 +383,12 @@ def update_rss_feed(state):
       <itunes:email>jbcortina214@gmail.com</itunes:email>
     </itunes:owner>
     <itunes:explicit>false</itunes:explicit>
-    <itunes:category text="Religion &amp; Spirituality" />
-    <itunes:category text="Society &amp; Culture" />
+        <itunes:category text="Religion &amp; Spirituality">
+      <itunes:category text="Spirituality"/>
+    </itunes:category>
+    <itunes:category text="Society &amp; Culture">
+      <itunes:category text="Personal Journals"/>
+    </itunes:category>
     <itunes:image href="{BASE_URL}/cover.jpg" />
     {items_xml}
   </channel>
