@@ -445,7 +445,7 @@ def generate_script_payload(date_str: str, scripture_ref: str) -> dict:
     6. "bird_text": 2 sentence description of observing this bird in nature.
     7. "closing": A 1-sentence closing blessing.
     8. "candidate_sources": Array of 2 to 3 candidate reference objects:
-       [{"label": "<descriptive label>", "url": "<url>"}]
+       [{{"label": "<descriptive label>", "url": "<url>"}}]
 
     CRITICAL RULES FOR SOURCE CANDIDATES:
     - ONLY provide open-access, non-paywalled public URLs (ncbi.nlm.nih.gov/pmc, nih.gov, ebird.org, .edu, .gov).
