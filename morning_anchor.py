@@ -30,7 +30,11 @@ def generate_content_with_fallback(client, prompt):
             try:
                 print(f"📡 Requesting script via {model_name} (Attempt {attempt})...")
                 config = types.GenerateContentConfig(response_mime_type="application/json")
-                response = generate_content_with_fallback(client, prompt)
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=config
+                )
                 if response and response.text:
                     return CleanResponse(response)
             except Exception as e:
@@ -43,75 +47,18 @@ def generate_content_with_fallback(client, prompt):
                 time.sleep(3 * attempt)
     raise last_err
 
-
-import time
-import shutil
-from gradio_client import Client
-#!/usr/bin/env python3
-"""
-Morning Anchor - Daily Contemplative Podcast Pipeline
-======================================================
-Sole Host: Morning Anchor (en-AU-NatashaNeural @ +8% speed)
-Translation: NLT (New Living Translation strictly)
-
-Strict Skeleton Rules & Hard Abort Triggers:
-1. Workspace Hygiene: Purges temp chunks & previous build artifacts on startup.
-2. Voice & Speed: en-AU-NatashaNeural set to rate="+8%" (1.08x speed).
-3. Artwork Generation: Imagen 3 watercolor Van Gogh style, single centered object,
-   zero text, zero people. API failure, timeout, or 0-byte output triggers hard_abort().
-4. Interludes:
-   - Type A: Rotates 15 pre-rendered local files (5 Dear Gravity tracks x 3 variants).
-   - Type B: Dynamic 15s preview on Music days. Missing/failed preview triggers hard_abort().
-   - Type C: Local files typeC-SteepHillsOfVicodinTears-1.mp3 and -2.mp3 around Grieving News.
-   - Missing any required interlude asset triggers hard_abort().
-5. Show Notes & Link Validation:
-   - 3-part layout: Episode Overview, Chapters Listing, Sources & Links.
-   - All references post-SA Prayer undergo live HTTP 200 OK check. 404/dead paths trigger hard_abort().
-6. Duration Bounds:
-   - Sun-Fri daily: strictly 8 to 12 minutes (480-720s).
-   - Saturday recap: strictly 12 to 15 minutes (720-900s).
-   - Out-of-bounds duration triggers hard_abort().
-7. Idempotency: Same-day re-runs overwrite assets in-place by GUID (morning-anchor-{date_str}).
-"""
-
 import os
 import sys
-import json
-import glob
+import time
 import re
-import random
-import shutil
-import subprocess
-import urllib.request
-import urllib.error
-from datetime import datetime, timezone
+import json
+import asyncio
+import requests
+from google import genai
+from google.genai import types
 
-# ---------------------------------------------------------------------------
-# CONFIGURATION & CONSTANTS
-# ---------------------------------------------------------------------------
-VOICE_NAME = "en-AU-NatashaNeural"
-VOICE_RATE = "+8%"  # 1.08x speed
-SCRIPTURE_TRANSLATION = "NLT"
 
-DIR_INTERLUDES = "interludes"
-DIR_TEMP = "temp_chunks"
-DIR_EPISODES = "episodes"
-DIR_TRANSCRIPTS = "transcripts"
-DIR_COVERS = "covers"
 
-TYPE_C_FILE_1 = os.path.join(DIR_INTERLUDES, "typeC-SteepHillsOfVicodinTears-1.mp3")
-TYPE_C_FILE_2 = os.path.join(DIR_INTERLUDES, "typeC-SteepHillsOfVicodinTears-2.mp3")
-
-ARTWORK_PROMPT_TEMPLATE = (
-    "Soft watercolor painting on textured cream paper background painted in the style of Van Gogh, "
-    "with swirling brushstrokes, warm muted earth tones, soft amber lighting, delicate ink lines, "
-    "depicting a single centered rustic symbolic object: {image_symbol}, peaceful, serene, contemplative mood. "
-    "No text, no people."
-)
-
-# ---------------------------------------------------------------------------
-# UTILITY: HARD ABORT
-# ---------------------------------------------------------------------------
 def hard_abort(reason: str):
     """
     Executes an immediate hard failure termination.
