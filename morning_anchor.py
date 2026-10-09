@@ -1,3 +1,49 @@
+import os
+import sys
+import time
+import re
+import json
+import asyncio
+import requests
+from google import genai
+from google.genai import types
+
+class CleanResponse:
+    def __init__(self, raw_response):
+        self.raw = raw_response
+        text = getattr(raw_response, "text", "") or ""
+        text = text.strip()
+        if text.startswith("```"):
+            lines = text.splitlines()
+            if lines and lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].startswith("```"):
+                lines = lines[:-1]
+            text = "\n".join(lines).strip()
+        self.text = text
+
+def generate_content_with_fallback(client, prompt):
+    models = ["gemini-3.8-flash", "gemini-3.5-flash-lite"]
+    last_err = None
+    for model_name in models:
+        for attempt in range(1, 4):
+            try:
+                print(f"📡 Requesting script via {model_name} (Attempt {attempt})...")
+                config = types.GenerateContentConfig(response_mime_type="application/json")
+                response = generate_content_with_fallback(client, prompt)
+                if response and response.text:
+                    return CleanResponse(response)
+            except Exception as e:
+                err_str = str(e)
+                print(f"⚠️ {model_name} attempt {attempt} failed ({err_str}).")
+                last_err = e
+                if "404" in err_str or "NOT_FOUND" in err_str:
+                    print(f"⏩ {model_name} returned 404. Skipping to next model...")
+                    break
+                time.sleep(3 * attempt)
+    raise last_err
+
+
 import time
 import shutil
 from gradio_client import Client
@@ -459,44 +505,7 @@ def generate_script_payload(date_str: str, scripture_ref: str) -> dict:
     return json.loads(response.text)
 
 
-class CleanResponse:
-    def __init__(self, raw_response):
-        self.raw = raw_response
-        text = getattr(raw_response, "text", "") or ""
-        text = text.strip()
-        if text.startswith("```"):
-            lines = text.splitlines()
-            if lines and lines[0].startswith("```"):
-                lines = lines[1:]
-            if lines and lines[-1].startswith("```"):
-                lines = lines[:-1]
-            text = "\n".join(lines).strip()
-        self.text = text
 
-def generate_content_with_fallback(client, prompt):
-    models = ["gemini-3.8-flash", "gemini-3.5-flash-lite"]
-    last_err = None
-    for model_name in models:
-        for attempt in range(1, 4):
-            try:
-                print(f"📡 Requesting script via {model_name} (Attempt {attempt})...")
-                config = types.GenerateContentConfig(response_mime_type="application/json")
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                    config=config
-                )
-                if response and response.text:
-                    return CleanResponse(response)
-            except Exception as e:
-                err_str = str(e)
-                print(f"⚠️ {model_name} attempt {attempt} failed ({err_str}).")
-                last_err = e
-                if "404" in err_str or "NOT_FOUND" in err_str:
-                    print(f"⏩ {model_name} returned 404. Skipping to next model...")
-                    break
-                time.sleep(3 * attempt)
-    raise last_err
 
 def main():
     print("========================================================")
